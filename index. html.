@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magyarország Stratégiai Társasjáték</title>
+    <style>
+        /* CSS RÉSZ - A megjelenésért */
+        body { margin: 0; font-family: sans-serif; background-color: #f0e6d2; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #stats { display: grid; grid-template-columns: repeat(3, 1fr); background: #3e2723; color: white; padding: 10px; font-size: 0.8rem; gap: 5px; }
+        .stat-box { border-bottom: 1px solid #5d4037; padding: 2px; }
+        
+        #board { 
+            flex-grow: 1; 
+            background-image: url('2954.png'); /* Fontos: a kép neve ez legyen! */
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            position: relative; border: 5px solid #8d6e63; background-color: #e4d5b7;
+        }
+        
+        #player-token { 
+            position: absolute; font-size: 2rem; transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            transform: translate(-50%, -50%); z-index: 10;
+        }
+
+        #inventory { background: #efebe9; padding: 8px; border-top: 2px solid #8d6e63; max-height: 100px; overflow-y: auto; font-size: 0.8rem; }
+        #controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; background: #d7ccc8; }
+        
+        button { padding: 10px; border: none; border-radius: 5px; background: #5d4037; color: white; font-weight: bold; font-size: 0.75rem; }
+        button:disabled { background: #a1887f; }
+        .next-turn { background: #2e7d32; grid-column: span 2; }
+    </style>
+</head>
+<body>
+
+    <div id="stats">
+        <div class="stat-box">💰 Pénz: <span id="penz">1000</span></div>
+        <div class="stat-box">📦 Nyersanyag: <span id="nyersanyag">0</span></div>
+        <div class="stat-box">⚡ Energia: <span id="energia">0</span></div>
+        <div class="stat-box">👥 Munkaerő: <span id="munkaero">0</span></div>
+        <div class="stat-box">📅 Kör: <span id="kor">1</span></div>
+        <div class="stat-box">📍 Hely: <span id="hely">Budapest</span></div>
+    </div>
+
+    <div id="board">
+        <div id="player-token">📍</div>
+    </div>
+
+    <div id="inventory">
+        <strong>🏢 Tulajdon:</strong> <span id="tulajdon-lista">Még nincs.</span>
+    </div>
+
+    <div id="controls">
+        <button id="btn-lep" onclick="lepj()">Lépés (3/3)</button>
+        <button onclick="fejlesztIparag('autoipar')">Autóipar (2📦+1⚡)</button>
+        <button onclick="fejlesztIparag('it')">IT (2👥+1⚡)</button>
+        <button onclick="bankiCsere()">Banki Csere (100💰)</button>
+        <button class="next-turn" onclick="korVege()">Kör Vége (Új erőforrások)</button>
+    </div>
+
+    <script>
+        /* JAVASCRIPT RÉSZ - A játék logikája */
+        const varosok = {
+            "Budapest": { top: "52%", left: "68%" },
+            "Győr": { top: "37%", left: "30%" },
+            "Szeged": { top: "70%", left: "70%" },
+            "Miskolc": { top: "33%", left: "80%" },
+            "Szombathely": { top: "52%", left: "42%" },
+            "Tatabánya": { top: "35%", left: "55%" },
+            "Zalaegerszeg": { top: "60%", left: "25%" },
+            "Kaposvár": { top: "72%", left: "38%" },
+            "Székesfehérvár": { top: "60%", left: "50%" },
+            "Salgótarján": { top: "25%", left: "70%" }
+        };
+
+        let jatekos = {
+            penz: 1000, nyersanyag: 2, energia: 1, munkaero: 1,
+            korSzamlalo: 1, lepesek: 3, pozicio: "Budapest"
+        };
+        let tulajdonok = [];
+
+        function lepj() {
+            if (jatekos.lepesek > 0) {
+                const nevek = Object.keys(varosok);
+                const cel = nevek[Math.floor(Math.random() * nevek.length)];
+                frissitPozicio(cel);
+                jatekos.lepesek--;
+                frissitKijelzo();
+            } else {
+                [span_5](start_span)alert("Elfogytak a lépéseid[span_5](end_span)!");
+            }
+        }
+
+        function frissitPozicio(varos) {
+            const token = document.getElementById('player-token');
+            token.style.top = varosok[varos].top;
+            token.style.left = varosok[varos].left;
+            jatekos.pozicio = varos;
+            document.getElementById('hely').innerText = varos;
+        }
+
+        function fejlesztIparag(tipus) {
+            const marVan = tulajdonok.find(t => t.varos === jatekos.pozicio);
+            [span_6](start_span)if (marVan) return alert("Itt már van iparág[span_6](end_span)!");
+
+            const koltseg = {
+                autoipar: { n: 2, e: 1, m: 0, nev: "Autóipar" },
+                it: { n: 0, e: 1, m: 2, nev: "IT" }
+            }[tipus];
+
+            if (jatekos.nyersanyag >= koltseg.n && jatekos.energia >= koltseg.e && jatekos.munkaero >= koltseg.m) {
+                jatekos.nyersanyag -= koltseg.n;
+                jatekos.energia -= koltseg.e;
+                jatekos.munkaero -= koltseg.m;
+                tulajdonok.push({ varos: jatekos.pozicio, ipar: koltseg.nev });
+                [span_7](start_span)alert(`Sikeres fejlesztés: ${koltseg.nev}[span_7](end_span)!`);
+                frissitKijelzo();
+            } else {
+                [span_8](start_span)alert("Nincs elég erőforrásod[span_8](end_span)!");
+            }
+        }
+
+        function korVege() {
+            if (jatekos.korSzamlalo % 3 === 0) {
+                let ado = Math.round(jatekos.penz * 0.12);
+                jatekos.penz -= ado;
+                [span_9](start_span)alert(`Adózás kör: -${ado} 💰[span_9](end_span)`);
+            }
+            
+            [span_10](start_span)// Véletlen esemény[span_10](end_span)
+            [span_11](start_span)if(Math.random() > 0.7) alert("Esemény: Állami támogatást kaptál! +100 💰[span_11](end_span)");
+
+            jatekos.korSzamlalo++;
+            jatekos.lepesek = 3;
+            [span_12](start_span)jatekos.nyersanyag += 1; // Alap termelés[span_12](end_span)
+            jatekos.penz += 50;      [span_13](start_span)// Alap bevétel[span_13](end_span)
+            frissitKijelzo();
+        }
+
+        function bankiCsere() {
+            if (jatekos.penz >= 100) {
+                jatekos.penz -= 100;
+                jatekos.energia += 1;
+                frissitKijelzo();
+            [span_14](start_span)}[span_14](end_span)
+        }
+
+        function frissitKijelzo() {
+            document.getElementById('penz').innerText = jatekos.penz;
+            document.getElementById('nyersanyag').innerText = jatekos.nyersanyag;
+            document.getElementById('energia').innerText = jatekos.energia;
+            document.getElementById('munkaero').innerText = jatekos.munkaero;
+            document.getElementById('kor').innerText = jatekos.korSzamlalo;
+            document.getElementById('btn-lep').innerText = `Lépés (${jatekos.lepesek}/3)`;
+            document.getElementById('tulajdon-lista').innerText = 
+                tulajdonok.length ? tulajdonok.map(t => `${t.varos}(${t.ipar})`).join(", ") : "Még nincs.";
+        }
+
+        window.onload = () => frissitPozicio("Budapest");
+    </script>
+</body>
+</html>
